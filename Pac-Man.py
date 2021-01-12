@@ -41,7 +41,7 @@ class Board:
                     sprite.rect.x = 25 + j * 30
                     sprite.rect.y = 25 + i * 30
                     decorations.add(sprite)
-                    map[i][j] = 1
+                    map[i][j] = -1
                 elif self.level[i][j] == '-':
                     sprite = pygame.sprite.Sprite()
                     sprite.image = self.load_image("door.jpg")
