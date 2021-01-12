@@ -93,13 +93,13 @@ class PacMan(pygame.sprite.Sprite):
 
     def change_way(self, ev):
         if ev.scancode == 80:
-            self.x_move, self.y_move = -1, 0
+            self.x_move, self.y_move = -10, 0
         if ev.scancode == 82:
-            self.x_move, self.y_move = 0, -1
+            self.x_move, self.y_move = 0, -10
         if ev.scancode == 79:
-            self.x_move, self.y_move = 1, 0
+            self.x_move, self.y_move = 10, 0
         if ev.scancode == 81:
-            self.x_move, self.y_move = 0, 1
+            self.x_move, self.y_move = 0, 10
 
 
 if __name__ == '__main__':
@@ -164,7 +164,7 @@ if __name__ == '__main__':
             board.render(screen_play)
             all_sprites.draw(screen_play)
             pygame.display.flip()
-            clock.tick(30)
+            clock.tick(80)
         pygame.quit()
     except FileNotFoundError:
         print('Файл с уровнем не найден')
