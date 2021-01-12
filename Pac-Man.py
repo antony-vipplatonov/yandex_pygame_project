@@ -75,9 +75,11 @@ class Board:
         x, y = pos[0], pos[1]
         for i in range(len(self.level)):
             for j in range(len(self.level[i])):
-                if x > 25 + j * 30 and x < 25 + (j + 1) * 30 and \
-                        y > 25 + i * 30 and y < 25 + (i + 1) * 30:
+                if x >= 25 + j * 30 and x <= 25 + (j + 1) * 30 and \
+                        y >= 25 + i * 30 and y <= 25 + (i + 1) * 30:
                     return i, j
+                else:
+                    return 1, 1
 
     def load_image(self, name, colorkey=None):
         fullname = os.path.join('images', name)
@@ -166,7 +168,7 @@ class Ghost(pygame.sprite.Sprite):
         try:
             if pacman.ate_big_point:
                 self.scared()
-                target_x, target_y = 1, 1
+                target_x, target_y = 55, 55
             elif self.x == pacman.x_move and self.y == pacman.y_move:
                 running = False
             else:
@@ -174,9 +176,8 @@ class Ghost(pygame.sprite.Sprite):
             map_way = [[one for one in line] for line in self.level_map]
             map_way = self.obhod(map_way, self.x, self.y, 1)
             self.make_way(map_way, target_x, target_y)
-            self.x, self.y = 25 + self.way[1][0] * 30, 25 + self.way[1][1] * 30
-            print(self.x, self.y)
-            self.rect = self.rect.move(self.x, self.y)
+            self.x, self.y = self.way[1][0], self.way[1][1]
+            self.rect = self.rect.move(25 + self.x * 30, 25 + self.y * 30)
         except IndexError:
             pass
 
@@ -200,7 +201,7 @@ class Ghost(pygame.sprite.Sprite):
         t = lab[y][x]
         self.way.append((x, y))
         if t == 1:
-            return
+            return 1
         for xp, yp in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
             xr = x + xp
             yr = y + yp
@@ -224,12 +225,12 @@ class Ghost(pygame.sprite.Sprite):
             board.score += 200
 
     def get_target(self):
-        return get_pacman_cord(board.level)
+        return board.find_cell((pacman.x_move, pacman.y_move))
 
 
 class Shadow(Ghost):
     def get_target(self):
-        return get_pacman_cord(board.level)
+        return board.find_cell((pacman.x_move, pacman.y_move))
 
 
 if __name__ == '__main__':
@@ -298,9 +299,8 @@ if __name__ == '__main__':
                 if event.type == pygame.KEYDOWN:
                     pacman.change_way(event)
             if not placed and board.score > 0:
-                shadow = Shadow(25 + get_ghost_coord(board.level, 2)[0] * 30,
-                                25 + get_ghost_coord(board.level, 2)[1] * 30,
-                                level_map)
+                shadow = Shadow(get_ghost_coord(board.level, 2)[0],
+                                get_ghost_coord(board.level, 2)[1], level_map)
                 # тут инициируются привидения
                 placed = True
             if board.score > 0:
