@@ -13,6 +13,8 @@ def get_pacman_cord(level):
 class Board:
     def __init__(self, level):
         self.level = level
+        self.cell_size = 30
+        self.left = 25
 
     def render(self, screen):
         decorations = pygame.sprite.Group()
@@ -145,14 +147,24 @@ if __name__ == '__main__':
         size = width, height
         screen_play = pygame.display.set_mode(size)
         running = True
+        all_sprites = pygame.sprite.Group()
+        clock = pygame.time.Clock()
+        pacman = PacMan(map(lambda x: board.left + board.cell_size * x,
+                            get_pacman_cord(level)))
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     print(board.find_cell(event.pos))
+                if event.type == pygame.KEYDOWN:
+                    pacman.change_way(event)
+            screen_play.fill((0, 0, 0))
+            pacman.update()
             board.render(screen_play)
+            all_sprites.draw(screen_play)
             pygame.display.flip()
+            clock.tick(30)
         pygame.quit()
     except FileNotFoundError:
         print('Файл с уровнем не найден')
