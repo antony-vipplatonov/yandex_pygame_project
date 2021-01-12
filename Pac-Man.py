@@ -10,6 +10,14 @@ def get_pacman_cord(level):
                 return [j, i]
 
 
+def get_ghost_coord(level):
+    global ghost_type
+    for i in range(len(level)):
+        for j in range(len(level[i])):
+            if level[i][j] == '@':
+                return [j, i]
+
+
 class Board:
     def __init__(self, level):
         self.level = level
@@ -21,7 +29,7 @@ class Board:
         self.score = 0
 
     def render(self, screen):
-        global decorations, points
+        global decorations, points, map
         decorations = pygame.sprite.Group()
         points = pygame.sprite.Group()
         for i in range(len(self.level)):
@@ -33,6 +41,7 @@ class Board:
                     sprite.rect.x = 25 + j * 30
                     sprite.rect.y = 25 + i * 30
                     decorations.add(sprite)
+                    map[i][j] = 1
                 elif self.level[i][j] == '-':
                     sprite = pygame.sprite.Sprite()
                     sprite.image = self.load_image("door.jpg")
@@ -95,6 +104,8 @@ class PacMan(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, 28, 28)
         self.x_move = 0
         self.y_move = 0
+        self.ate_big_coin = False
+        self.ate_clock = 0
 
     def update(self, *args):
         self.rect = self.rect.move(self.x_move, self.y_move)
@@ -103,6 +114,12 @@ class PacMan(pygame.sprite.Sprite):
         c = pygame.sprite.spritecollide(self, points, True)
         for i in c:
             x, y = i.cords
+            if board.level[y][x] == ',':
+                board.score += 50
+                self.ate_big_coin = True
+                self.ate_clock = 0
+            else:
+                board.score += 10
             board.level[y][x] = ' '
 
     def change_way(self, ev):
@@ -121,6 +138,73 @@ class PacMan(pygame.sprite.Sprite):
             self.x_move, self.y_move = x, y
         else:
             self.rect = self.rect.move(-self.x_move, -self.y_move)
+
+
+class Ghost(pygame.sprite.Sprite):
+    def __init__(self, pos, map):
+        super().__init__(all_sprites)
+        self.x, self.y = pos
+        self.way = []
+
+    def update(self, *args):
+        global running
+        try:
+            if pacman.ate_big_point:
+                self.scared()
+                target_x, target_y = 1, 1
+            elif pygame.sprite.spritecollideany(self, pacman):
+                running = False
+            else:
+                target_x, target_y = get_pacman_cord(board.level)
+            map_way = [[one for one in line] for line in map]
+            map_way = self.obhod(map_way, self.x, self.y, 0)
+            self.make_way(map_way, target_x, target_y)
+            self.x, self.y = self.way[1]
+        except IndexError:
+            pass
+
+    def obhod(self, lab, x, y, cur):
+        lab[y][x] = cur
+        for xp, yp in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            xr = x + xp
+            yr = y + yp
+            try:
+                if 0 <= xr and 0 <= yr:
+                    if lab[yr][xr] == 0 or (
+                            lab[yr][xr] != -1 and lab[yr][xr] > cur):
+                        self.obhod(lab, xr, yr, cur + 1)
+                else:
+                    continue
+            except IndexError:
+                continue
+        return lab
+
+    def make_way(self, lab, x, y):
+        t = lab[y][x]
+        self.way.append((x, y))
+        if t == 1:
+            return
+        for xp, yp in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            xr = x + xp
+            yr = y + yp
+            try:
+                if 0 <= xr and 0 <= yr:
+                    if lab[yr][xr] == t - 1:
+                        self.make_way(lab, xr, yr)
+                        continue
+                else:
+                    continue
+            except IndexError:
+                continue
+
+    def scared(self):
+        pacman.ate_clock += 1
+        if pacman.ate_clock == 11:
+            pacman.ate_big_coin = False
+            pacman.ate_clock = 0
+        elif pygame.sprite.spritecollideany(self, pacman):
+            self.x, self.y = get_ghost_coord(board.level)
+            board.score += 200
 
 
 if __name__ == '__main__':
@@ -174,6 +258,11 @@ if __name__ == '__main__':
                             get_pacman_cord(level)))
         points = pygame.sprite.Group()
         decorations = pygame.sprite.Group()
+
+        map = [[0 for one in range(len(level[0]))] for _ in range(len(level))]
+        ghost_type = 0
+        ghost_color = ['red', 'pink', 'blue', 'orange']
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
