@@ -10,12 +10,15 @@ def get_pacman_cord(level):
                 return [j, i]
 
 
-def get_ghost_coord(level):
+def get_ghost_coord(level, turn):
     global ghost_type
+    which_position = 0
     for i in range(len(level)):
         for j in range(len(level[i])):
             if level[i][j] == '@':
-                return [j, i]
+                which_position += 1
+                if which_position == turn:
+                    return [j, i]
 
 
 class Board:
@@ -29,7 +32,7 @@ class Board:
         self.score = 0
 
     def render(self, screen):
-        global decorations, points, map
+        global decorations, points, level_map
         decorations = pygame.sprite.Group()
         points = pygame.sprite.Group()
         for i in range(len(self.level)):
@@ -41,7 +44,7 @@ class Board:
                     sprite.rect.x = 25 + j * 30
                     sprite.rect.y = 25 + i * 30
                     decorations.add(sprite)
-                    map[i][j] = -1
+                    level_map[i][j] = -1
                 elif self.level[i][j] == '-':
                     sprite = pygame.sprite.Sprite()
                     sprite.image = self.load_image("door.jpg")
@@ -104,7 +107,7 @@ class PacMan(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, 28, 28)
         self.x_move = 0
         self.y_move = 0
-        self.ate_big_coin = False
+        self.ate_big_point = False
         self.ate_clock = 0
 
     def update(self, *args):
@@ -116,7 +119,7 @@ class PacMan(pygame.sprite.Sprite):
             x, y = i.cords
             if board.level[y][x] == ',':
                 board.score += 50
-                self.ate_big_coin = True
+                self.ate_big_point = True
                 self.ate_clock = 0
             else:
                 board.score += 10
@@ -141,10 +144,22 @@ class PacMan(pygame.sprite.Sprite):
 
 
 class Ghost(pygame.sprite.Sprite):
-    def __init__(self, pos, map):
+    def __init__(self, x, y, level_map):
         super().__init__(all_sprites)
-        self.x, self.y = pos
+        self.x, self.y = x, y
         self.way = []
+        self.level_map = level_map
+        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
+                                    32)
+        self.rect = pygame.Rect(self.x, self.y, 27, 27)
+        shadow = pygame.sprite.Group()
+        sprite = pygame.sprite.Sprite()
+        sprite.image = board.load_image("shadow.jpg")
+        sprite.rect = sprite.image.get_rect()
+        shadow.add(sprite)
+        sprite.rect.x = 0
+        sprite.rect.y = 0
+        shadow.draw(self.image)
 
     def update(self, *args):
         global running
@@ -152,14 +167,16 @@ class Ghost(pygame.sprite.Sprite):
             if pacman.ate_big_point:
                 self.scared()
                 target_x, target_y = 1, 1
-            elif pygame.sprite.spritecollideany(self, pacman):
+            elif self.x == pacman.x_move and self.y == pacman.y_move:
                 running = False
             else:
-                target_x, target_y = get_pacman_cord(board.level)
-            map_way = [[one for one in line] for line in map]
-            map_way = self.obhod(map_way, self.x, self.y, 0)
+                target_x, target_y = self.get_target()
+            map_way = [[one for one in line] for line in self.level_map]
+            map_way = self.obhod(map_way, self.x, self.y, 1)
             self.make_way(map_way, target_x, target_y)
-            self.x, self.y = self.way[1]
+            self.x, self.y = 25 + self.way[1][0] * 30, 25 + self.way[1][1] * 30
+            print(self.x, self.y)
+            self.rect = self.rect.move(self.x, self.y)
         except IndexError:
             pass
 
@@ -203,8 +220,16 @@ class Ghost(pygame.sprite.Sprite):
             pacman.ate_big_coin = False
             pacman.ate_clock = 0
         elif pygame.sprite.spritecollideany(self, pacman):
-            self.x, self.y = get_ghost_coord(board.level)
+            self.x, self.y = get_ghost_coord(board.level, 1)
             board.score += 200
+
+    def get_target(self):
+        return get_pacman_cord(board.level)
+
+
+class Shadow(Ghost):
+    def get_target(self):
+        return get_pacman_cord(board.level)
 
 
 if __name__ == '__main__':
@@ -259,10 +284,11 @@ if __name__ == '__main__':
         points = pygame.sprite.Group()
         decorations = pygame.sprite.Group()
 
-        map = [[0 for one in range(len(level[0]))] for _ in range(len(level))]
+        level_map = [[0 for one in range(len(level[0]))] for _ in
+                     range(len(level))]
         ghost_type = 0
         ghost_color = ['red', 'pink', 'blue', 'orange']
-
+        placed = False
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -271,6 +297,14 @@ if __name__ == '__main__':
                     print(board.find_cell(event.pos))
                 if event.type == pygame.KEYDOWN:
                     pacman.change_way(event)
+            if not placed and board.score > 0:
+                shadow = Shadow(25 + get_ghost_coord(board.level, 2)[0] * 30,
+                                25 + get_ghost_coord(board.level, 2)[1] * 30,
+                                level_map)
+                # тут инициируются привидения
+                placed = True
+            if board.score > 0:
+                shadow.update()
             screen_play.fill((0, 0, 0))
             pacman.update()
             board.render(screen_play)
