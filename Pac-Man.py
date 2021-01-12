@@ -3,6 +3,13 @@ import os
 import sys
 
 
+def get_pacman_cord(level):
+    for i in range(len(level)):
+        for j in range(len(level[i])):
+            if level[i][j] == '*':
+                return [j, i]
+
+
 class Board:
     def __init__(self, level):
         self.level = level
@@ -65,6 +72,32 @@ class Board:
         else:
             image = image.convert_alpha()
         return image
+
+
+class PacMan(pygame.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__(all_sprites)
+        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4),
+                                    pygame.SRCALPHA, 32)
+        pygame.draw.circle(self.image, pygame.Color("yellow"),
+                           (13, 13), 13)
+        self.rect = pygame.Rect(*pos, 30, 30)
+        self.x_move = 0
+        self.y_move = 0
+
+    def update(self, *args):
+        if True:
+            self.rect = self.rect.move(self.x_move, self.y_move)
+
+    def change_way(self, ev):
+        if ev.scancode == 80:
+            self.x_move, self.y_move = -1, 0
+        if ev.scancode == 82:
+            self.x_move, self.y_move = 0, -1
+        if ev.scancode == 79:
+            self.x_move, self.y_move = 1, 0
+        if ev.scancode == 81:
+            self.x_move, self.y_move = 0, 1
 
 
 if __name__ == '__main__':
