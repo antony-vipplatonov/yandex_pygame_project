@@ -14,9 +14,13 @@ class Board:
     def __init__(self, level):
         self.level = level
         self.cell_size = 30
+        self.width = len(self.level[0])
+        self.height = len(self.level)
         self.left = 25
+        self.top = 25
 
     def render(self, screen):
+        global decorations, points
         decorations = pygame.sprite.Group()
         points = pygame.sprite.Group()
         for i in range(len(self.level)):
@@ -79,19 +83,23 @@ class Board:
 class PacMan(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__(all_sprites)
-        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4),
-                                    pygame.SRCALPHA, 32)
-        pygame.draw.circle(self.image, pygame.Color("yellow"),
-                           (13, 13), 13)
-        self.rect = pygame.Rect(*pos, 30, 30)
+        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
+                                    32)
+        pygame.draw.circle(self.image, pygame.Color("yellow"), (13, 13), 13)
+        x, y = pos
+        x += 1
+        y += 1
+        self.rect = pygame.Rect(x, y, 28, 28)
         self.x_move = 0
         self.y_move = 0
 
     def update(self, *args):
-        if True:
-            self.rect = self.rect.move(self.x_move, self.y_move)
+        self.rect = self.rect.move(self.x_move, self.y_move)
+        if pygame.sprite.spritecollideany(self, decorations):
+            self.rect = self.rect.move(-self.x_move, -self.y_move)
 
     def change_way(self, ev):
+        x, y = self.x_move, self.y_move
         if ev.scancode == 80:
             self.x_move, self.y_move = -10, 0
         if ev.scancode == 82:
@@ -100,6 +108,12 @@ class PacMan(pygame.sprite.Sprite):
             self.x_move, self.y_move = 10, 0
         if ev.scancode == 81:
             self.x_move, self.y_move = 0, 10
+        self.rect = self.rect.move(self.x_move, self.y_move)
+        if pygame.sprite.spritecollideany(self, decorations):
+            self.rect = self.rect.move(-self.x_move, -self.y_move)
+            self.x_move, self.y_move = x, y
+        else:
+            self.rect = self.rect.move(-self.x_move, -self.y_move)
 
 
 if __name__ == '__main__':
@@ -151,6 +165,8 @@ if __name__ == '__main__':
         clock = pygame.time.Clock()
         pacman = PacMan(map(lambda x: board.left + board.cell_size * x,
                             get_pacman_cord(level)))
+        points = pygame.sprite.Group()
+        decorations = pygame.sprite.Group()
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -164,7 +180,7 @@ if __name__ == '__main__':
             board.render(screen_play)
             all_sprites.draw(screen_play)
             pygame.display.flip()
-            clock.tick(80)
+            clock.tick(30)
         pygame.quit()
     except FileNotFoundError:
         print('Файл с уровнем не найден')
