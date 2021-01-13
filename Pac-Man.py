@@ -220,7 +220,8 @@ class Ghost(pygame.sprite.Sprite):
         if pacman.ate_clock == 11:
             pacman.ate_big_coin = False
             pacman.ate_clock = 0
-        elif pygame.sprite.spritecollideany(self, pacman):
+        elif board.find_cell((pacman.x_move, pacman.y_move)) == board.find_cell(
+                (self.x, self.y)):
             self.x, self.y = get_ghost_coord(board.level, 1)
             board.score += 200
 
