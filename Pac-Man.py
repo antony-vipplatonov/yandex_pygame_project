@@ -206,10 +206,10 @@ class Ghost(pygame.sprite.Sprite):
                     (self.rect.x + 29, self.rect.y + 15))
             elif self.get_target()[0] == self.x and self.get_target()[
                 1] == self.y and pacman.ate_big_coin:
-                print('w')
+                print(self.speed)
                 self.rect = self.rect.move(
-                    (11 * 30 - self.x * self.speed) / 2,
-                    (12 * 30 - self.y * self.speed) / 2)
+                    (12 * 30 - (self.x - 1) * self.speed) / 2,
+                    (11 * 30 - (self.y - 1) * self.speed) / 2)
                 self.x, self.y = 12, 11
             else:
                 self.rect = self.rect.move(self.speed, 0)
