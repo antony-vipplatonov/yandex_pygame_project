@@ -129,7 +129,7 @@ class PacMan(pygame.sprite.Sprite):
             x, y = i.cords
             if board.level[y][x] == ',':
                 board.score += 50
-                self.ate_big_point = True
+                self.ate_big_coin = True
                 self.ate_clock = 0
             else:
                 board.score += 10
@@ -139,13 +139,13 @@ class PacMan(pygame.sprite.Sprite):
 
     def change_way(self, ev):
         x, y = self.x_move, self.y_move
-        if ev.scancode == 80:
+        if ev.key == pygame.K_LEFT:
             self.x_move, self.y_move = -10, 0
-        if ev.scancode == 82:
+        if ev.key == pygame.K_UP:
             self.x_move, self.y_move = 0, -10
-        if ev.scancode == 79:
+        if ev.key == pygame.K_RIGHT:
             self.x_move, self.y_move = 10, 0
-        if ev.scancode == 81:
+        if ev.key == pygame.K_DOWN:
             self.x_move, self.y_move = 0, 10
         self.rect = self.rect.move(self.x_move, self.y_move)
         if pygame.sprite.spritecollideany(self, decorations):
@@ -171,7 +171,7 @@ class Ghost(pygame.sprite.Sprite):
         self.updates = 0
 
     def update_target(self):
-        if pacman.ate_big_point:
+        if pacman.ate_big_coin:
             target_x, target_y = 12, 11
         else:
             target_x, target_y = self.get_target()
@@ -340,6 +340,27 @@ class Bashful(Ghost):
         return super().get_target()
 
 
+class Pockey(Ghost):
+    def __init__(self, x, y, level_map):
+        super().__init__(x, y, level_map)
+        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
+                                    32)
+        pygame.draw.circle(self.image, pygame.Color("orange"), (13, 13), 13)
+
+    def get_target(self):
+        x, y = Ghost.get_target(self)
+        map_way = [[one for one in line] for line in self.level_map]
+        map_way = self.obhod(map_way, self.x, self.y, 1)
+        self.make_way(map_way, x, y)
+
+        if len(self.way) > 16:
+            self.way = []
+            return (x, y)
+        else:
+            self.way = []
+            return (4, 20)
+
+
 if __name__ == '__main__':
     if not os.path.exists('images'):
         os.mkdir('images')
@@ -443,6 +464,8 @@ if __name__ == '__main__':
                         get_ghost_coord(board.level, 2)[1], level_map)
         bashful = Bashful(get_ghost_coord(board.level, 3)[0],
                           get_ghost_coord(board.level, 3)[1], level_map)
+        pockey = Pockey(get_ghost_coord(board.level, 4)[0],
+                        get_ghost_coord(board.level, 4)[1], level_map)
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -456,6 +479,8 @@ if __name__ == '__main__':
                 shadow.update()
             if board.score > 300:
                 speedy.update()
+            if board.score > 450:
+                pockey.update()
             if board.score > 600:
                 bashful.update()
             pacman.update()
