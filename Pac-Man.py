@@ -119,11 +119,12 @@ class PacMan(pygame.sprite.Sprite):
         self.rect = self.rect.move(self.x_move, self.y_move)
         if pygame.sprite.spritecollideany(self, decorations):
             self.rect = self.rect.move(-self.x_move, -self.y_move)
-        if pacman.ate_big_coin:
-            pacman.ate_clock += 1
-            if pacman.ate_clock == 11:
-                pacman.ate_big_coin = False
-                pacman.ate_clock = 0
+        if self.ate_big_coin:
+            print(self.ate_clock)
+            self.ate_clock += 0.2
+            if self.ate_clock >= 11:
+                self.ate_big_coin = False
+                self.ate_clock = 0
         c = pygame.sprite.spritecollide(self, points, True)
         for i in c:
             x, y = i.cords
@@ -134,7 +135,9 @@ class PacMan(pygame.sprite.Sprite):
             else:
                 board.score += 10
             board.level[y][x] = ' '
-        if pygame.sprite.spritecollideany(self, ghosts):
+        if pygame.sprite.spritecollideany(self,
+                                          ghosts) and not self.ate_big_coin:
+            print('dead')
             running = False
 
     def change_way(self, ev):
@@ -201,9 +204,13 @@ class Ghost(pygame.sprite.Sprite):
                 self.rect = self.rect.move(-self.speed, 0)
                 self.x, self.y = board.find_cell(
                     (self.rect.x + 29, self.rect.y + 15))
-            elif x == self.x and y == self.y:
-                1 == 1
-                # НУ ТУТ ПРОИГРЫШ
+            elif self.get_target()[0] == self.x and self.get_target()[
+                1] == self.y and pacman.ate_big_coin:
+                print('w')
+                self.rect = self.rect.move(
+                    (11 * 30 - self.x * self.speed) / 2,
+                    (12 * 30 - self.y * self.speed) / 2)
+                self.x, self.y = 12, 11
             else:
                 self.rect = self.rect.move(self.speed, 0)
                 self.x, self.y = board.find_cell(
@@ -484,6 +491,7 @@ if __name__ == '__main__':
             if board.score > 600:
                 bashful.update()
             pacman.update()
+
             board.render(screen_play)
             all_sprites.draw(screen_play)
             pygame.display.flip()
