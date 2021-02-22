@@ -115,6 +115,7 @@ class PacMan(pygame.sprite.Sprite):
         self.ate_clock = 0
 
     def update(self, *args):
+        global running
         self.rect = self.rect.move(self.x_move, self.y_move)
         if pygame.sprite.spritecollideany(self, decorations):
             self.rect = self.rect.move(-self.x_move, -self.y_move)
@@ -129,7 +130,6 @@ class PacMan(pygame.sprite.Sprite):
                 board.score += 10
             board.level[y][x] = ' '
         if pygame.sprite.spritecollideany(self, ghosts):
-            global running
             running = False
 
     def change_way(self, ev):
@@ -167,6 +167,7 @@ class Ghost(pygame.sprite.Sprite):
 
     def update_target(self):
         if pacman.ate_big_point:
+            print(pacman.ate_clock)
             self.scared()
             target_x, target_y = 12, 11
         else:
@@ -244,6 +245,7 @@ class Ghost(pygame.sprite.Sprite):
 
     def scared(self):
         pacman.ate_clock += 1
+        print(pacman.ate_clock)
         if pacman.ate_clock == 11:
             pacman.ate_big_coin = False
             pacman.ate_clock = 0
@@ -403,8 +405,8 @@ if __name__ == '__main__':
 
         level_map = [[0 for one in range(len(level[0]))] for _ in
                      range(len(level))]
-        ghost_type = 0
-        '''ghost_color = ['red', 'pink', 'blue', 'orange']'''
+        '''ghost_type = 0
+        ghost_color = ['red', 'pink', 'blue', 'orange']'''
         placed = 0
 
         shadow = Shadow(get_ghost_coord(board.level, 1)[0],
