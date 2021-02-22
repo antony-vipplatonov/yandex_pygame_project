@@ -111,7 +111,7 @@ class PacMan(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, 28, 28)
         self.x_move = 0
         self.y_move = 0
-        self.ate_big_point = False
+        self.ate_big_coin = False
         self.ate_clock = 0
 
     def update(self, *args):
@@ -119,6 +119,11 @@ class PacMan(pygame.sprite.Sprite):
         self.rect = self.rect.move(self.x_move, self.y_move)
         if pygame.sprite.spritecollideany(self, decorations):
             self.rect = self.rect.move(-self.x_move, -self.y_move)
+        if pacman.ate_big_coin:
+            pacman.ate_clock += 1
+            if pacman.ate_clock == 11:
+                pacman.ate_big_coin = False
+                pacman.ate_clock = 0
         c = pygame.sprite.spritecollide(self, points, True)
         for i in c:
             x, y = i.cords
@@ -167,8 +172,6 @@ class Ghost(pygame.sprite.Sprite):
 
     def update_target(self):
         if pacman.ate_big_point:
-            print(pacman.ate_clock)
-            self.scared()
             target_x, target_y = 12, 11
         else:
             target_x, target_y = self.get_target()
@@ -242,16 +245,6 @@ class Ghost(pygame.sprite.Sprite):
                     continue
             except IndexError:
                 continue
-
-    def scared(self):
-        pacman.ate_clock += 1
-        if pacman.ate_clock == 11:
-            pacman.ate_big_coin = False
-            pacman.ate_clock = 0
-        '''elif board.find_cell((pacman.rect.x, pacman.rect.y)) == board.find_cell(
-                (self.x, self.y)):
-            self.x, self.y = get_ghost_coord(board.level, 1)
-            board.score += 200'''
 
     def get_target(self):
         return board.find_cell((pacman.rect.x + 15, pacman.rect.y + 15))
