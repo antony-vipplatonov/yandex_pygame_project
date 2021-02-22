@@ -245,7 +245,6 @@ class Ghost(pygame.sprite.Sprite):
 
     def scared(self):
         pacman.ate_clock += 1
-        print(pacman.ate_clock)
         if pacman.ate_clock == 11:
             pacman.ate_big_coin = False
             pacman.ate_clock = 0
@@ -292,7 +291,6 @@ class Speedy(Ghost):
                     x, y = z
                     if board.level[y][x] == '#':
                         continue
-                    print(z)
                     return z
                     break
         else:
@@ -306,7 +304,44 @@ class Speedy(Ghost):
                     x, y = z
                     if board.level[y][x] == '#':
                         continue
-                    print(z)
+                    return z
+                    break
+        return super().get_target()
+
+
+class Bashful(Ghost):
+    def __init__(self, x, y, level_map):
+        super().__init__(x, y, level_map)
+        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
+                                    32)
+        pygame.draw.circle(self.image, pygame.Color("lightblue"), (13, 13), 13)
+
+    def get_target(self):
+        xm, ym = pacman.x_move, pacman.y_move
+        if ym == 0:
+            for i in range(2):
+                x = (xm // 10 * 30 * (2 - i) + pacman.rect.x + 15) * 2
+                y = (pacman.rect.y + 15) * 2
+                z = board.find_cell((x, y))
+                if z is None:
+                    continue
+                else:
+                    x, y = z
+                    if board.level[y][x] == '#':
+                        continue
+                    return z
+                    break
+        else:
+            for i in range(2):
+                x = (pacman.rect.x + 15) * 2
+                y = (ym // 10 * 30 * (2 - i) + pacman.rect.y + 15) * 2
+                z = board.find_cell((x, y))
+                if z is None:
+                    continue
+                else:
+                    x, y = z
+                    if board.level[y][x] == '#':
+                        continue
                     return z
                     break
         return super().get_target()
@@ -413,6 +448,8 @@ if __name__ == '__main__':
                         get_ghost_coord(board.level, 1)[1], level_map)
         speedy = Speedy(get_ghost_coord(board.level, 2)[0],
                         get_ghost_coord(board.level, 2)[1], level_map)
+        bashful = Bashful(get_ghost_coord(board.level, 3)[0],
+                          get_ghost_coord(board.level, 3)[1], level_map)
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -426,6 +463,8 @@ if __name__ == '__main__':
                 shadow.update()
             if board.score > 300:
                 speedy.update()
+            if board.score > 600:
+                bashful.update()
             pacman.update()
             board.render(screen_play)
             all_sprites.draw(screen_play)
