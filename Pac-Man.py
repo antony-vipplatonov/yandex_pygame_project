@@ -103,9 +103,11 @@ class Board:
 class PacMan(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__(all_sprites)
-        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
-                                    32)
-        pygame.draw.circle(self.image, pygame.Color("yellow"), (13, 13), 13)
+        self.imagl = board.load_image('pacmanleft.png')
+        self.imagr = board.load_image('pacmanright.png')
+        self.imagt = board.load_image('pacmantop.png')
+        self.imagb = board.load_image('pacmanbot.png', colorkey=-1)
+        self.image = self.imagl
         x, y = pos
         x += 1
         y += 1
@@ -133,29 +135,47 @@ class PacMan(pygame.sprite.Sprite):
                 board.score += 50
                 self.ate_big_coin = True
                 self.ate_clock = 0
+                bashful.scaring()
+                speedy.scaring()
+                shadow.scaring()
+                pockey.scaring()
             else:
                 board.score += 10
+                soundpoint.stop()
+                soundpoint.play()
             board.level[y][x] = ' '
         if pygame.sprite.spritecollideany(self,
-                                          ghosts) and not self.ate_big_coin:
-            died = True
-            running = False
+                                          ghosts):
+            if not self.ate_big_coin:
+                died = True
+                running = False
+            else:
+                c = pygame.sprite.spritecollide(self, ghosts, False)
+                for ghost in c:
+                    if ghost.eatable:
+                        board.score += 200
+                        ghost.ate()
 
     def change_way(self, ev):
         x, y = self.x_move, self.y_move
         if ev.key == pygame.K_LEFT:
+            imag = self.imagl
             self.x_move, self.y_move = -10, 0
         if ev.key == pygame.K_UP:
+            imag = self.imagt
             self.x_move, self.y_move = 0, -10
         if ev.key == pygame.K_RIGHT:
+            imag = self.imagr
             self.x_move, self.y_move = 10, 0
         if ev.key == pygame.K_DOWN:
+            imag = self.imagb
             self.x_move, self.y_move = 0, 10
         self.rect = self.rect.move(self.x_move, self.y_move)
         if pygame.sprite.spritecollideany(self, decorations):
             self.rect = self.rect.move(-self.x_move, -self.y_move)
             self.x_move, self.y_move = x, y
         else:
+            self.image = imag
             self.rect = self.rect.move(-self.x_move, -self.y_move)
 
 
@@ -169,9 +189,13 @@ class Ghost(pygame.sprite.Sprite):
         self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
                                     32)
         self.rect = pygame.Rect((self.x + 1) * 30, (self.y + 1) * 30, 30, 30)
+
         self.speed = 5
+        self.lspeed = 5
         self.ticks = 0
         self.updates = 0
+        self.eatable = False
+        self.fear = False
 
     def update_target(self):
         if pacman.ate_big_coin:
@@ -219,6 +243,22 @@ class Ghost(pygame.sprite.Sprite):
                     (self.rect.x + 1, self.rect.y + 15))
         except IndexError:
             pass
+
+    def ate(self):
+        self.eatable = False
+        # поменять спрайт
+        self.speed, self.lspeed = 10, self.speed
+
+    def scaring(self):
+        # поменять спрайт
+        self.fear = True
+        self.eatable = True
+
+    def unscare(self):
+        self.speed = self.lspeed
+        self.fear = False
+        self.eatable = False
+        # поменять спрайт
 
     def obhod(self, lab, x, y, cur):
         lab[y][x] = cur
@@ -410,6 +450,8 @@ if __name__ == '__main__':
     pygame.init()
     operating = True
     while operating:
+        soundpoint = pygame.mixer.Sound('images/point.mp3')
+        soundpoint.set_volume(0.05)
         menu_text = ['Pac-Man', '1 level', '2 level', '3 level', 'help',
                      'exit']
         font = pygame.font.Font('19888.ttf', 70)
