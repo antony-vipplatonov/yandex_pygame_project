@@ -13,7 +13,6 @@ def get_pacman_cord(level):
 
 def get_ghost_coord(level, turn):
     global ghost_type
-
     which_position = 0
     for i in range(len(level)):
         for j in range(len(level[i])):
@@ -34,7 +33,7 @@ class Board:
         self.score = 0
 
     def render(self, screen):
-        global decorations, points, level_map
+        global decorations, points, level_map, running
         decorations = pygame.sprite.Group()
         points = pygame.sprite.Group()
         for i in range(len(self.level)):
@@ -70,6 +69,8 @@ class Board:
                     sprite.rect.y = 27 + i * 30
                     sprite.cords = (j, i)
                     points.add(sprite)
+        if len(points) == 0:
+            running = False
         decorations.draw(screen_play)
         points.draw(screen_play)
 
@@ -111,36 +112,44 @@ class PacMan(pygame.sprite.Sprite):
         self.rect = pygame.Rect(x, y, 28, 28)
         self.x_move = 0
         self.y_move = 0
-        self.ate_big_point = False
+        self.ate_big_coin = False
         self.ate_clock = 0
 
     def update(self, *args):
-        global running
+        global running, died
         self.rect = self.rect.move(self.x_move, self.y_move)
         if pygame.sprite.spritecollideany(self, decorations):
             self.rect = self.rect.move(-self.x_move, -self.y_move)
+        if self.ate_big_coin:
+            print(self.ate_clock)
+            self.ate_clock += 0.2
+            if self.ate_clock >= 11:
+                self.ate_big_coin = False
+                self.ate_clock = 0
         c = pygame.sprite.spritecollide(self, points, True)
         for i in c:
             x, y = i.cords
             if board.level[y][x] == ',':
                 board.score += 50
-                self.ate_big_point = True
+                self.ate_big_coin = True
                 self.ate_clock = 0
             else:
                 board.score += 10
             board.level[y][x] = ' '
-        if pygame.sprite.spritecollideany(self, ghosts):
+        if pygame.sprite.spritecollideany(self,
+                                          ghosts) and not self.ate_big_coin:
+            died = True
             running = False
 
     def change_way(self, ev):
         x, y = self.x_move, self.y_move
-        if ev.scancode == 80:
+        if ev.key == pygame.K_LEFT:
             self.x_move, self.y_move = -10, 0
-        if ev.scancode == 82:
+        if ev.key == pygame.K_UP:
             self.x_move, self.y_move = 0, -10
-        if ev.scancode == 79:
+        if ev.key == pygame.K_RIGHT:
             self.x_move, self.y_move = 10, 0
-        if ev.scancode == 81:
+        if ev.key == pygame.K_DOWN:
             self.x_move, self.y_move = 0, 10
         self.rect = self.rect.move(self.x_move, self.y_move)
         if pygame.sprite.spritecollideany(self, decorations):
@@ -160,15 +169,12 @@ class Ghost(pygame.sprite.Sprite):
         self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
                                     32)
         self.rect = pygame.Rect((self.x + 1) * 30, (self.y + 1) * 30, 30, 30)
-
         self.speed = 5
         self.ticks = 0
         self.updates = 0
 
     def update_target(self):
-        if pacman.ate_big_point:
-            print(pacman.ate_clock)
-            self.scared()
+        if pacman.ate_big_coin:
             target_x, target_y = 12, 11
         else:
             target_x, target_y = self.get_target()
@@ -198,14 +204,19 @@ class Ghost(pygame.sprite.Sprite):
                 self.rect = self.rect.move(-self.speed, 0)
                 self.x, self.y = board.find_cell(
                     (self.rect.x + 29, self.rect.y + 15))
-            elif x == self.x and y == self.y:
-                1 == 1
-                # НУ ТУТ ПРОИГРЫШ
+            elif self.get_target()[0] == self.x and self.get_target()[
+                1] == self.y and pacman.ate_big_coin:
+                print('w')
+                print(self.speed)
+                x_move = 0
+                y_move = 0
+
+                self.rect = self.rect.move(x_move, y_move)
+                self.x, self.y = 12, 11
             else:
                 self.rect = self.rect.move(self.speed, 0)
                 self.x, self.y = board.find_cell(
                     (self.rect.x + 1, self.rect.y + 15))
-
         except IndexError:
             pass
 
@@ -242,16 +253,6 @@ class Ghost(pygame.sprite.Sprite):
                     continue
             except IndexError:
                 continue
-
-    def scared(self):
-        pacman.ate_clock += 1
-        if pacman.ate_clock == 11:
-            pacman.ate_big_coin = False
-            pacman.ate_clock = 0
-        '''elif board.find_cell((pacman.rect.x, pacman.rect.y)) == board.find_cell(
-                (self.x, self.y)):
-            self.x, self.y = get_ghost_coord(board.level, 1)
-            board.score += 200'''
 
     def get_target(self):
         return board.find_cell((pacman.rect.x + 15, pacman.rect.y + 15))
@@ -347,6 +348,26 @@ class Bashful(Ghost):
         return super().get_target()
 
 
+class Pockey(Ghost):
+    def __init__(self, x, y, level_map):
+        super().__init__(x, y, level_map)
+        self.image = pygame.Surface((2 * 15 - 4, 2 * 15 - 4), pygame.SRCALPHA,
+                                    32)
+        pygame.draw.circle(self.image, pygame.Color("orange"), (13, 13), 13)
+
+    def get_target(self):
+        x, y = Ghost.get_target(self)
+        map_way = [[one for one in line] for line in self.level_map]
+        map_way = self.obhod(map_way, self.x, self.y, 1)
+        self.make_way(map_way, x, y)
+        if len(self.way) > 16:
+            self.way = []
+            return (x, y)
+        else:
+            self.way = []
+            return (4, 20)
+
+
 if __name__ == '__main__':
     if not os.path.exists('images'):
         os.mkdir('images')
@@ -386,45 +407,156 @@ if __name__ == '__main__':
             for j in range(25):
                 pixels[i, j] = 248, 4, 4
         im.save("images/shadow.jpg")
-
     pygame.init()
-    menu_text = ['Pac-Man', '1 level']
-    font = pygame.font.Font(None, 30)
-    text_coord = 100
-    width, height = 500, 500
-    size = width, height
-    screen_menu = pygame.display.set_mode(size)
-    string_rendered = font.render(menu_text[0], 5, pygame.Color('white'))
-    intro_rect = string_rendered.get_rect()
-    text_coord += 50
-    intro_rect.top = text_coord
-    intro_rect.x = 50
-    text_coord += intro_rect.height
-    screen_menu.blit(string_rendered, intro_rect)
-    for line in menu_text[1:]:
-        string_rendered = font.render(line, 1, pygame.Color('white'))
+    operating = True
+    while operating:
+        menu_text = ['Pac-Man', '1 level', '2 level', '3 level', 'help',
+                     'exit']
+        font = pygame.font.Font('19888.ttf', 70)
+        text_coord = 5
+        width, height = 500, 400
+        size = width, height
+        screen_menu = pygame.display.set_mode(size)
+        string_rendered = font.render(menu_text[0], 5, (248, 235, 49))
         intro_rect = string_rendered.get_rect()
-        text_coord += 10
+        text_coord += 50
         intro_rect.top = text_coord
-        intro_rect.x = 10
+        intro_rect.x = 125
         text_coord += intro_rect.height
         screen_menu.blit(string_rendered, intro_rect)
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                running = False
-        pygame.display.flip()
 
-    file_level = 1
-    if file_level == 1:
-        file_name = 'level1.txt'
-        f = open(file_name, 'rt', encoding="utf-8")
-        level = [[one for one in f.readline().replace('\n', '')] for _ in
-                 range(22)]
-        f.close()
+        font = pygame.font.Font('19888.ttf', 32)
+        string_rendered = font.render((' ' * 2).join(menu_text[1:4]), 1,
+                                      (248, 235, 49))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 70
+        intro_rect.top = text_coord
+        intro_rect.x = 30
+        text_coord += intro_rect.height
+        screen_menu.blit(string_rendered, intro_rect)
+
+        string_rendered = font.render((' ' * 15).join(menu_text[4:]), 1,
+                                      (248, 235, 49))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 100
+        intro_rect.top = text_coord
+        intro_rect.x = 40
+        text_coord += intro_rect.height
+        screen_menu.blit(string_rendered, intro_rect)
+
+        running = True
+        while running and operating:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    operating = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x = event.pos[0]
+                    y = event.pos[1]
+                    if x >= 380 and x <= 450 and y >= 335 and y <= 350:
+                        operating = False
+                    elif x >= 30 and x <= 150 and y >= 195 and y <= 218:
+                        file_level = 1
+                        running = False
+                    elif x >= 190 and x <= 314 and y >= 195 and y <= 218:
+                        file_level = 2
+                        running = False
+                    elif x >= 352 and x <= 475 and y >= 195 and y <= 218:
+                        file_level = 3
+                        running = False
+            pygame.display.flip()
+        if file_level == 1:
+            file_name = 'level1.txt'
+            if not os.path.exists(file_name):
+                level = ['############################',
+                         '#............##............#',
+                         '#,#####.####.##.#####.####,#',
+                         '#.#####.####.##.#####.####.#',
+                         '#.#####.####.##.#####.####.#',
+                         '#..........................#',
+                         '##.####.############.####.##',
+                         '#..........................#',
+                         '#.#####.#### ## ####.#####.#',
+                         '#.......#.# *    #.#.......#',
+                         '#.##.##.#.###--###.#.##.##.#',
+                         '#.##.##.#.##@@@@##.#.##.##.#',
+                         '#.##.##.#.########.#.##.##.#',
+                         '#.##.##..............##.##.#',
+                         '#.##.##.############.##.##.#',
+                         '#............##............#',
+                         '#,##.##.####.##.####.##.##,#',
+                         '#.##.##.####.##.####.##.##.#',
+                         '#..........................#',
+                         '#.#####.####.##.#####.####.#',
+                         '#..........................#',
+                         '############################', ]
+            else:
+                f = open(file_name, 'rt', encoding="utf-8")
+                level = [[one for one in f.readline().replace('\n', '')] for _
+                         in
+                         range(22)]
+                f.close()
+        elif file_level == 2:
+            file_name = 'level2.txt'
+            if not os.path.exists(file_name):
+                level = ['############################'
+                         '#............##............#',
+                         '#.#.#.#.#.##.##.##.##.####.#',
+                         '#.#.,...#.##.##.##.##.####.#',
+                         '#.#####.####.##.##.##.####.#',
+                         '#...#..................#.,.#',
+                         '##.#.##..###.##.##.#.#.##.##',
+                         '#..........................#',
+                         '#.#####.#### ## ####.#####.#',
+                         '#.....#... *      .........#',
+                         '##.#.##.#.###--###..#.#.#.##',
+                         '##.#.##.#.##@@@@##..#.#.#.##',
+                         '##.#,##.#.########..#.#.#.##',
+                         '##.#.##.............#.#.#.##',
+                         '##.#.##.##.########.#.#.#.##',
+                         '#.....#......##.....###....#',
+                         '#.#.#.#.####.##.##.#.###,#.#',
+                         '###.#.#.####.##.##.#.#.#.#.#',
+                         '#.#.#.#..............#.###.#',
+                         '#.#.#.#.####.##.#####..###.#',
+                         '#..........................#',
+                         '############################']
+            else:
+                f = open(file_name, 'rt', encoding="utf-8")
+                level = [[one for one in f.readline().replace('\n', '')] for _
+                         in
+                         range(22)]
+                f.close()
+        elif file_level == 3:
+            file_name = 'level3.txt'
+            if not os.path.exists(file_name):
+                level = ['############################',
+                         '#......#...................#',
+                         '#.#.#.#.#.##.##.##.##.##.#.#',
+                         '###.,...#.##.##..#.#...#####',
+                         '#.#.#.#.####.##.##.##.##.#.#',
+                         '#...#..................#.,.#',
+                         '##.#.##..###.##.##.#.#.##.##',
+                         '#............##............#',
+                         '#.#####.#### ## ##########.#',
+                         '#.....#.#. *      ..#......#',
+                         '#.##.##.#.###--###..#.#.#.##',
+                         '##...##.#..#@@@@#...#.#.#.##',
+                         '####.##.#.########..#.#.#.##',
+                         '##,..##.................#.##',
+                         '#.##.##.##.#####.##.#.#.#.##',
+                         '#.....#......##.....###....#',
+                         '#.#.#.#.####.##.##.#.###,#.#',
+                         '###.#.#.####.##.##.#.#.#.#.#',
+                         '#.#.#.#..............#.....#',
+                         '#.#.#.#.#.##.##.#.###..###.#',
+                         '#.....#.............#....#.#',
+                         '############################']
+            else:
+                f = open(file_name, 'rt', encoding="utf-8")
+                level = [[one for one in f.readline().replace('\n', '')] for _
+                         in
+                         range(22)]
+                f.close()
         board = Board(level)
         width, height = 32 * len(level[0]), 32 * len(level)
         size = width, height
@@ -437,25 +569,22 @@ if __name__ == '__main__':
         points = pygame.sprite.Group()
         decorations = pygame.sprite.Group()
         ghosts = pygame.sprite.Group()
-
         level_map = [[0 for one in range(len(level[0]))] for _ in
                      range(len(level))]
-        '''ghost_type = 0
-        ghost_color = ['red', 'pink', 'blue', 'orange']'''
         placed = 0
-
+        died = False
         shadow = Shadow(get_ghost_coord(board.level, 1)[0],
                         get_ghost_coord(board.level, 1)[1], level_map)
         speedy = Speedy(get_ghost_coord(board.level, 2)[0],
                         get_ghost_coord(board.level, 2)[1], level_map)
         bashful = Bashful(get_ghost_coord(board.level, 3)[0],
                           get_ghost_coord(board.level, 3)[1], level_map)
-        while running:
+        pockey = Pockey(get_ghost_coord(board.level, 4)[0],
+                        get_ghost_coord(board.level, 4)[1], level_map)
+        while running and operating:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
-                '''if event.type == pygame.MOUSEBUTTONDOWN:
-                    print(board.find_cell(event.pos))'''
+                    operating = False
                 if event.type == pygame.KEYDOWN:
                     pacman.change_way(event)
             screen_play.fill((0, 0, 0))
@@ -463,6 +592,8 @@ if __name__ == '__main__':
                 shadow.update()
             if board.score > 300:
                 speedy.update()
+            if board.score > 450:
+                pockey.update()
             if board.score > 600:
                 bashful.update()
             pacman.update()
@@ -470,4 +601,65 @@ if __name__ == '__main__':
             all_sprites.draw(screen_play)
             pygame.display.flip()
             clock.tick(30)
-        pygame.quit()
+
+        width, height = 500, 350
+        size = width, height
+        screen_result = pygame.display.set_mode(size)
+        score = "Your score: " + str(board.score)
+        if died:
+            menu_text = ["You've lost!", score, 'menu', 'exit']
+            font = pygame.font.Font('19888.ttf', 70)
+            text_coord = 5
+            size = width, height
+            string_rendered = font.render(menu_text[0], 5, (248, 235, 49))
+            intro_rect = string_rendered.get_rect()
+            text_coord += 50
+            intro_rect.top = text_coord
+            intro_rect.x = 25
+            text_coord += intro_rect.height
+            screen_result.blit(string_rendered, intro_rect)
+        else:
+            menu_text = ["You won!", score, 'menu', 'exit']
+            font = pygame.font.Font('19888.ttf', 70)
+            text_coord = 5
+            string_rendered = font.render(menu_text[0], 5, (248, 235, 49))
+            intro_rect = string_rendered.get_rect()
+            text_coord += 50
+            intro_rect.top = text_coord
+            intro_rect.x = 110
+            text_coord += intro_rect.height
+            screen_result.blit(string_rendered, intro_rect)
+
+        font = pygame.font.Font('19888.ttf', 32)
+        string_rendered = font.render(menu_text[1], 1,
+                                      (248, 235, 49))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 50
+        intro_rect.top = text_coord
+        intro_rect.x = 130
+        text_coord += intro_rect.height
+        screen_result.blit(string_rendered, intro_rect)
+
+        string_rendered = font.render((' ' * 15).join(menu_text[2:]), 1,
+                                      (248, 235, 49))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 60
+        intro_rect.top = text_coord
+        intro_rect.x = 50
+        text_coord += intro_rect.height
+        screen_result.blit(string_rendered, intro_rect)
+
+        running = True
+        while running and operating:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    operating = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x = event.pos[0]
+                    y = event.pos[1]
+                    if x >= 392 and x <= 460 and y >= 272 and y <= 290:
+                        operating = False
+                    elif x >= 45 and x <= 120 and y >= 275 and y <= 290:
+                        running = False
+            pygame.display.flip()
+    pygame.quit()
